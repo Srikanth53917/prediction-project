@@ -1,31 +1,35 @@
 import matplotlib
-matplotlib.use('Agg')   # Fix server issue
+matplotlib.use('Agg')
 
 import matplotlib.pyplot as plt
 
 
 def stock_price_chart(data):
     plt.figure()
+
+    # Fix column name issue
+    if '4. close' in data.columns:
+        data = data.rename(columns={'4. close': 'Close'})
+
     plt.plot(data['Close'])
     plt.title("Stock Price Trend")
     plt.xlabel("Date")
     plt.ylabel("Price")
 
     plt.savefig("static/stock_chart.png")
-
-    # OPTIONAL popup (comment if not needed)
-    # plt.show()
-
     plt.close()
 
 
-def sentiment_chart(scores):
+def sentiment_chart(score):
     plt.figure()
 
-    # ✅ Fix: handle empty or wrong data
-    if not isinstance(scores, dict) or sum(scores.values()) == 0:
-        print("⚠️ Using fallback sentiment data")
-        scores = {"positive": 1, "negative": 1, "neutral": 1}
+    # Convert score → categories
+    if score > 0:
+        scores = {"positive": 1, "neutral": 0, "negative": 0}
+    elif score < 0:
+        scores = {"positive": 0, "neutral": 0, "negative": 1}
+    else:
+        scores = {"positive": 0, "neutral": 1, "negative": 0}
 
     labels = list(scores.keys())
     values = list(scores.values())
@@ -34,8 +38,4 @@ def sentiment_chart(scores):
     plt.title("Sentiment Analysis")
 
     plt.savefig("static/sentiment_chart.png")
-
-    # OPTIONAL popup
-    # plt.show()
-
     plt.close()
