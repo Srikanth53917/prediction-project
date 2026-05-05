@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Stock Market Prediction</title>
+
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial;
+            background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
+            color: white;
+            text-align: center;
+        }
+
+        h1 {
+            margin-top: 30px;
+            color: #00d4ff;
+        }
+
+        form {
+            margin-top: 40px;
+        }
+
+        input {
+            padding: 12px;
+            margin: 10px;
+            border-radius: 8px;
+            border: none;
+            width: 220px;
+            font-size: 16px;
+        }
+
+        button {
+            padding: 12px 25px;
+            background: #00d4ff;
+            border: none;
+            border-radius: 10px;
+            color: black;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #00aacc;
+        }
+
+        .card {
+            margin: 40px auto;
+            padding: 30px;
+            width: 400px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.5);
+        }
+
+        .positive { color: #00ff88; }
+        .negative { color: #ff4c4c; }
+        .neutral { color: #ffd700; }
+
+        img {
+            margin-top: 20px;
+            border-radius: 10px;
+        }
+
+        /* Dropdown */
+        #dropdown {
+            width: 220px;
+            margin: auto;
+            background: rgba(0,0,0,0.9);
+            border-radius: 8px;
+            max-height: 150px;
+            overflow-y: auto;
+            display: none;
+        }
+
+        .dropdown-item {
+            padding: 10px;
+            cursor: pointer;
+        }
+
+        .dropdown-item:hover {
+            background: #00d4ff;
+            color: black;
+        }
+    </style>
+</head>
+
+<body>
+
+<h1>📈 Stock Market Prediction Dashboard</h1>
+
+<!-- ✅ FORM -->
+<form method="POST" action="/">
+
+    <!-- SEARCH BOX -->
+    <input type="text" id="searchBox" placeholder="Search Company..." required>
+
+    <!-- HIDDEN TICKER -->
+    <input type="hidden" name="ticker" id="ticker">
+
+    <!-- DROPDOWN -->
+    <div id="dropdown"></div>
+
+    <br>
+
+    <input type="number" name="start_year" placeholder="Start Year" required>
+    <input type="number" name="end_year" placeholder="End Year" required>
+
+    <br>
+    <button type="submit">Analyze</button>
+
+</form>
+
+<!-- ✅ RESULT -->
+{% if result %}
+<div class="card">
+    <h2>{{ result.company }}</h2>
+
+    <p><strong>Last Price:</strong> {{ result.last_price }}</p>
+    <p><strong>Predicted Price:</strong> {{ result.predicted_price }}</p>
+
+    <p class="{{ result.sentiment_class }}">
+        <strong>Sentiment:</strong> {{ result.sentiment }}
+    </p>
+
+    <h3>Recommendation: {{ result.decision }}</h3>
+</div>
+
+<!-- ✅ CHARTS -->
+<div>
+    <h2>Stock Price Chart</h2>
+    <img src="/static/stock_chart.png" width="500">
+
+    <h2>Sentiment Analysis Chart</h2>
+    <img src="/static/sentiment_chart.png" width="500">
+</div>
+{% endif %}
+
+<!-- ✅ SCRIPT -->
+<script>
+const companies = [
+
+/* 🌍 GLOBAL COMPANIES */
+{name:"Apple",ticker:"AAPL"},
+{name:"Microsoft",ticker:"MSFT"},
+{name:"Google",ticker:"GOOGL"},
+{name:"Amazon",ticker:"AMZN"},
+{name:"Tesla",ticker:"TSLA"},
+{name:"Meta",ticker:"META"},
+{name:"NVIDIA",ticker:"NVDA"},
+{name:"Intel",ticker:"INTC"},
+{name:"IBM",ticker:"IBM"},
+{name:"Oracle",ticker:"ORCL"},
+{name:"Cisco",ticker:"CSCO"},
+{name:"Adobe",ticker:"ADBE"},
+{name:"PayPal",ticker:"PYPL"},
+{name:"Uber",ticker:"UBER"},
+{name:"Airbnb",ticker:"ABNB"},
+{name:"Zoom",ticker:"ZM"},
+{name:"Netflix",ticker:"NFLX"},
+{name:"Disney",ticker:"DIS"},
+{name:"Nike",ticker:"NKE"},
+{name:"Starbucks",ticker:"SBUX"},
+{name:"Walmart",ticker:"WMT"},
+{name:"Costco",ticker:"COST"},
+{name:"Target",ticker:"TGT"},
+{name:"McDonalds",ticker:"MCD"},
+{name:"CocaCola",ticker:"KO"},
+{name:"Pepsi",ticker:"PEP"},
+{name:"Pfizer",ticker:"PFE"},
+{name:"Johnson & Johnson",ticker:"JNJ"},
+{name:"Moderna",ticker:"MRNA"},
+{name:"Merck",ticker:"MRK"},
+{name:"ExxonMobil",ticker:"XOM"},
+{name:"Chevron",ticker:"CVX"},
+{name:"Ford",ticker:"F"},
+{name:"General Motors",ticker:"GM"},
+{name:"Boeing",ticker:"BA"},
+{name:"Goldman Sachs",ticker:"GS"},
+{name:"JPMorgan",ticker:"JPM"},
+{name:"Morgan Stanley",ticker:"MS"},
+{name:"Bank of America",ticker:"BAC"},
+{name:"Wells Fargo",ticker:"WFC"},
+{name:"Alibaba",ticker:"BABA"},
+{name:"Tencent",ticker:"TCEHY"},
+{name:"Sony",ticker:"SONY"},
+{name:"Samsung",ticker:"SSNLF"},
+{name:"SAP",ticker:"SAP"},
+{name:"Salesforce",ticker:"CRM"},
+{name:"Qualcomm",ticker:"QCOM"},
+{name:"AMD",ticker:"AMD"},
+{name:"Shopify",ticker:"SHOP"},
+{name:"Block",ticker:"SQ"},
+
+/* 🇮🇳 INDIAN COMPANIES */
+{name:"Reliance Industries",ticker:"RELIANCE.NS"},
+{name:"TCS",ticker:"TCS.NS"},
+{name:"Infosys",ticker:"INFY.NS"},
+{name:"Wipro",ticker:"WIPRO.NS"},
+{name:"HCL Tech",ticker:"HCLTECH.NS"},
+{name:"Tech Mahindra",ticker:"TECHM.NS"},
+{name:"HDFC Bank",ticker:"HDFCBANK.NS"},
+{name:"ICICI Bank",ticker:"ICICIBANK.NS"},
+{name:"State Bank of India",ticker:"SBIN.NS"},
+{name:"Axis Bank",ticker:"AXISBANK.NS"},
+{name:"Kotak Bank",ticker:"KOTAKBANK.NS"},
+{name:"IndusInd Bank",ticker:"INDUSINDBK.NS"},
+{name:"Bajaj Finance",ticker:"BAJFINANCE.NS"},
+{name:"Bajaj Finserv",ticker:"BAJAJFINSV.NS"},
+{name:"ONGC",ticker:"ONGC.NS"},
+{name:"Indian Oil",ticker:"IOC.NS"},
+{name:"BPCL",ticker:"BPCL.NS"},
+{name:"GAIL",ticker:"GAIL.NS"},
+{name:"Maruti Suzuki",ticker:"MARUTI.NS"},
+{name:"Tata Motors",ticker:"TATAMOTORS.NS"},
+{name:"Mahindra & Mahindra",ticker:"M&M.NS"},
+{name:"Hero MotoCorp",ticker:"HEROMOTOCO.NS"},
+{name:"Bajaj Auto",ticker:"BAJAJ-AUTO.NS"},
+{name:"Hindustan Unilever",ticker:"HINDUNILVR.NS"},
+{name:"ITC",ticker:"ITC.NS"},
+{name:"Nestle India",ticker:"NESTLEIND.NS"},
+{name:"Dabur",ticker:"DABUR.NS"},
+{name:"Britannia",ticker:"BRITANNIA.NS"},
+{name:"Sun Pharma",ticker:"SUNPHARMA.NS"},
+{name:"Dr Reddy",ticker:"DRREDDY.NS"},
+{name:"Cipla",ticker:"CIPLA.NS"},
+{name:"Divis Labs",ticker:"DIVISLAB.NS"},
+{name:"Larsen & Toubro",ticker:"LT.NS"},
+{name:"Tata Steel",ticker:"TATASTEEL.NS"},
+{name:"JSW Steel",ticker:"JSWSTEEL.NS"},
+{name:"Hindalco",ticker:"HINDALCO.NS"},
+{name:"Adani Ports",ticker:"ADANIPORTS.NS"},
+{name:"Adani Enterprises",ticker:"ADANIENT.NS"},
+{name:"Adani Green",ticker:"ADANIGREEN.NS"},
+{name:"Adani Power",ticker:"ADANIPOWER.NS"},
+{name:"Adani Transmission",ticker:"ADANITRANS.NS"},
+{name:"Asian Paints",ticker:"ASIANPAINT.NS"},
+{name:"UltraTech Cement",ticker:"ULTRACEMCO.NS"},
+{name:"Grasim",ticker:"GRASIM.NS"},
+{name:"Titan",ticker:"TITAN.NS"},
+{name:"Zomato",ticker:"ZOMATO.NS"},
+{name:"Paytm",ticker:"PAYTM.NS"},
+{name:"IRCTC",ticker:"IRCTC.NS"},
+{name:"Coal India",ticker:"COALINDIA.NS"},
+{name:"PowerGrid",ticker:"POWERGRID.NS"},
+{name:"NTPC",ticker:"NTPC.NS"},
+{name:"Bharti Airtel",ticker:"BHARTIARTL.NS"},
+{name:"Tata Power",ticker:"TATAPOWER.NS"}
+
+];
+
+const searchBox = document.getElementById("searchBox");
+const dropdown = document.getElementById("dropdown");
+const tickerInput = document.getElementById("ticker");
+
+searchBox.addEventListener("input", function () {
+    let value = this.value.toLowerCase();
+    dropdown.innerHTML = "";
+
+    if (value === "") {
+        dropdown.style.display = "none";
+        return;
+    }
+
+    let filtered = companies.filter(c =>
+        c.name.toLowerCase().includes(value) ||
+        c.ticker.toLowerCase().includes(value)
+    );
+
+    filtered.forEach(c => {
+        let div = document.createElement("div");
+        div.classList.add("dropdown-item");
+        div.innerHTML = c.name + " (" + c.ticker + ")";
+
+        div.onclick = function () {
+            searchBox.value = c.name;
+            tickerInput.value = c.ticker;
+            dropdown.style.display = "none";
+        };
+
+        dropdown.appendChild(div);
+    });
+
+    dropdown.style.display = "block";
+});
+</script>
+
+</body>
+</html>
