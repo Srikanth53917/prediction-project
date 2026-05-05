@@ -6,7 +6,7 @@ analyzer = SentimentIntensityAnalyzer()
 
 def analyze_sentiment_from_dataset(start_year, end_year):
     try:
-        df = pd.read_csv("data/news_data.csv")
+        df = pd.read_csv("prediction/data/news_data.csv")
 
         # Ensure year column exists
         df['year'] = df['year'].astype(str).str[:4].astype(int)
