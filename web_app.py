@@ -1,12 +1,9 @@
 from flask import Flask, render_template, request
-import requests
 import pandas as pd
 import traceback
 import time
+import requests
 import os
-
-# Use env variable if available, else fallback
-API_KEY = os.getenv("API_KEY", "JTLZVD07EXJDLYWW")
 
 from prediction.stock_prediction import train_stock_model, predict_next_day
 from sentiment.sentiment_analysis import analyze_sentiment_from_dataset
@@ -14,21 +11,30 @@ from visualization.charts import stock_price_chart, sentiment_chart
 
 app = Flask(__name__)
 
-def get_stock_data(ticker):
-    url = f"https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={ticker}&apikey={API_KEY}"
-    
-    response = requests.get(url)
-    data = response.json()
+API_KEY = os.getenv("API_KEY", "LE09ZONH4OKJAS2Q")
 
-    if "Time Series (Daily)" not in data:
+
+def get_stock_data(symbol):
+    try:
+        url = f"https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={symbol}&apikey={API_KEY}"
+        response = requests.get(url)
+        data = response.json()
+
+        if "Time Series (Daily)" not in data:
+            print("API Error:", data)
+            return None
+
+        df = pd.DataFrame.from_dict(data["Time Series (Daily)"], orient='index')
+        df = df.astype(float)
+        df.index = pd.to_datetime(df.index)
+        df.sort_index(inplace=True)
+
+        return df
+
+    except Exception as e:
+        print("Stock Fetch Error:", e)
         return None
 
-    prices = []
-    for date in data["Time Series (Daily)"]:
-        prices.append(float(data["Time Series (Daily)"][date]["4. close"]))
-
-    prices.reverse()
-    return prices
 
 @app.route("/", methods=["GET", "POST"])
 def home():
@@ -36,68 +42,79 @@ def home():
 
     if request.method == "POST":
         try:
-            ticker = request.form.get("ticker").upper()
+            ticker = request.form["ticker"].upper()
+            start_year = int(request.form["start_year"])
+            end_year = int(request.form["end_year"])
 
-            # API limit control
-            time.sleep(2)
+            start_date = f"{start_year}-01-01"
+            end_date = f"{end_year}-12-31"
 
-            prices = get_stock_data(ticker)
+            print("Fetching data...")
+            df = get_stock_data(ticker)
 
-            if prices is None or len(prices) == 0:
-                result = {"error": "Invalid ticker or API limit reached"}
-                return render_template("index.html", result=result)
+            if df is None or df.empty:
+                raise Exception("Stock data not available")
 
-            df = pd.DataFrame(prices, columns=["Close"])
+            time.sleep(12)  # prevent API rate limit
 
-            last_price = df["Close"].iloc[-1]
+            # Filter by date
+            df = df.loc[start_date:end_date]
 
-            # Prediction
-            try:
-                model = train_stock_model(df)
-                predicted_price = predict_next_day(model, df)
-            except:
+            # LAST PRICE
+            last_price = round(df["4. close"].iloc[-1], 2)
+
+            # MODEL
+            model = train_stock_model(df)
+
+            predicted_price = predict_next_day(model, df)
+            if predicted_price is None:
                 predicted_price = last_price
 
-            # Sentiment
-            try:
-                sentiment_score = analyze_sentiment_from_dataset(ticker)
-            except:
-                sentiment_score = 0
+            predicted_price = round(predicted_price, 2)
+
+            # SENTIMENT
+            sentiment_score = analyze_sentiment_from_dataset(ticker)
 
             if sentiment_score > 0:
                 sentiment = "Positive"
-                recommendation = "Buy"
+                sentiment_class = "positive"
+                decision = "Buy"
             elif sentiment_score < 0:
                 sentiment = "Negative"
-                recommendation = "Sell"
+                sentiment_class = "negative"
+                decision = "Sell"
             else:
                 sentiment = "Neutral"
-                recommendation = "Hold"
+                sentiment_class = "neutral"
+                decision = "Hold"
 
-            # Charts
-            try:
-                stock_chart = stock_price_chart(df, ticker)
-                sentiment_img = sentiment_chart(sentiment_score)
-            except:
-                stock_chart = None
-                sentiment_img = None
+            # CHARTS
+            stock_price_chart(df)
+            sentiment_chart(sentiment_score)
 
             result = {
                 "company": ticker,
-                "last_price": round(last_price, 2),
-                "predicted_price": round(predicted_price, 2),
+                "last_price": last_price,
+                "predicted_price": predicted_price,
                 "sentiment": sentiment,
-                "recommendation": recommendation,
-                "stock_chart": stock_chart,
-                "sentiment_chart": sentiment_img
+                "sentiment_class": sentiment_class,
+                "decision": decision
             }
 
         except Exception as e:
-            print("ERROR:", e)
-            traceback.print_exc()
-            result = {"error": "Something went wrong"}
+            print("ERROR:", traceback.format_exc())
+
+            result = {
+                "company": "Error",
+                "last_price": "-",
+                "predicted_price": "-",
+                "sentiment": "Error",
+                "sentiment_class": "negative",
+                "decision": "Check logs"
+            }
 
     return render_template("index.html", result=result)
+
 
 if __name__ == "__main__":
     app.run(debug=True)
