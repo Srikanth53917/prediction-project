@@ -73,7 +73,7 @@ def home():
             predicted_price = round(predicted_price, 2)
 
             # SENTIMENT
-           sentiment_score = analyze_sentiment_from_dataset(start_year, end_year)
+           sentiment_score = analyze_sentiment_from_dataset(tickker)
             if sentiment_score > 0:
                 sentiment = "Positive"
                 sentiment_class = "positive"
